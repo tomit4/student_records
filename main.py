@@ -196,12 +196,9 @@ def prompt_for_update_fields(con, student_id):
             .lower()
             .split(" ")
         )
-        for field in update_fields:
-            if not is_valid_field(field):
-                print(f"{field} is not a valid field, please try again")
-                continue
-            else:
-                return update_fields
+        if all(is_valid_field(field) for field in update_fields):
+            return update_fields
+        print("One or more fields are invalid, please try again.")
 
 
 def update_student(con, student_id, update_fields):
