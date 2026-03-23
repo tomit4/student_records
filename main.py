@@ -4,6 +4,7 @@ import sys
 
 
 def display_menu():
+    """Print the main menu options to the console"""
     print("========================================")
     print("=========== STUDENT DATABASE ===========")
     print("========================================")
@@ -16,6 +17,12 @@ def display_menu():
 
 
 def get_user_input():
+    """
+    Prompt the user to select a menu option.
+
+    Returns:
+        int: A valid menu choice between 1 and 5.
+    """
     while True:
         try:
             user_choice = int(input("Please enter your choice: "))
@@ -30,7 +37,16 @@ def get_user_input():
             continue
 
 
+########################
+# DATABASE SETUP
+#######################
 def create_students_table(con):
+    """
+    Create the 'students' table if it does not exist.
+
+    Args:
+        con (sqlite3.Connection): The database connection object.
+    """
     try:
         cur = con.cursor()
         cur.execute("""
@@ -49,6 +65,14 @@ def create_students_table(con):
 # READ LOGIC
 #######################
 def display_students(con):
+    """
+    Reads and outputs all rows from the 'students' table.
+
+    Args:
+        con (sqlite3.Connection): The database connection object.
+    Returns:
+        list (tuple): A list of all rows from the students table.
+    """
     try:
         cur = con.cursor()
         cur.execute("SELECT * FROM students")
@@ -63,6 +87,13 @@ def display_students(con):
 # INSERT LOGIC
 #######################
 def prompt_for_insert_data():
+    """
+    Presents a series of prompts for student data
+    to be inserted into 'students' table.
+
+    Returns:
+        list (str): A list of the entered name, grade, and email strings.
+    """
     while True:
         first_name = input("Enter student first name: ")
         if is_valid_name(first_name):
@@ -92,6 +123,15 @@ def prompt_for_insert_data():
 
 
 def insert_student_data(con, name, grade, email):
+    """
+    Inserts new student record into `students` table
+
+    Args:
+        con (sqlite3.Connection): The database connection object.
+        name: the student's name string
+        grade: the student's grade string
+        email: the student's email string
+    """
     try:
         cur = con.cursor()
         cur.execute(
@@ -111,6 +151,12 @@ def insert_student_data(con, name, grade, email):
 
 
 def prompt_for_update_data(con):
+    """
+    Prompts the user for which student id they wish to update and updates fields accordingly
+
+    Args:
+        con (sqlite3.Connection): The database connection object.
+    """
     while True:
         student_id = prompt_for_student_id("to update")
         id_exists = id_is_in_database(con, student_id)
@@ -124,6 +170,16 @@ def prompt_for_update_data(con):
 
 
 def prompt_for_update_fields(con, student_id):
+    """
+    Presents a series of prompts asking the user for
+    which fields they wish to update (name, grade, email)
+
+    Args:
+        con (sqlite3.Connection): The database connection object.
+        student_id (int): The student's id
+    Returns:
+        list (str): A list of selected fields to update
+    """
     try:
         cur = con.cursor()
         cur.execute("SELECT * FROM students WHERE id = ?", (student_id,))
@@ -149,6 +205,14 @@ def prompt_for_update_fields(con, student_id):
 
 
 def update_student(con, student_id, update_fields):
+    """
+    Updates the student's record with the selected new fields.
+
+    Args:
+        con (sqlite3.Connection): The database connection object.
+        student_id (int): The student's id
+        update_fields (list[str]): A list of selected fields to update
+    """
     new_values = {}
 
     for field in update_fields:
@@ -205,6 +269,12 @@ def update_student(con, student_id, update_fields):
 
 
 def prompt_for_delete_data(con):
+    """
+    Prompts the user for a student ID to delete and confirms deletion.
+
+    Args:
+        con (sqlite3.Connection): The database connection object.
+    """
     while True:
         print("WARNING: You are about to delete a student's record from the database!")
         print("Student Records cannot be restored after deletion!")
@@ -245,6 +315,13 @@ def prompt_for_delete_data(con):
 
 
 def delete_student(con, student_id):
+    """
+    Deletes student record by ID from the 'students' table.
+
+    Args:
+        con (sqlite3.Connection): The database connection object.
+        student_id (int): The student's id
+    """
     try:
         cur = con.cursor()
         cur.execute("DELETE FROM students WHERE id = ?", (student_id,))
@@ -259,23 +336,36 @@ def delete_student(con, student_id):
 # HELPER FUNCTIONS
 #######################
 def is_valid_name(name):
+    """Check if name contains only letters."""
     return name.isalpha()
 
 
 def is_valid_grade(grade):
+    "Check if grade is one of A, B, C, D, F."
     return grade.upper() in ["A", "B", "C", "D", "F"]
 
 
 def is_valid_email(email):
+    """Check if email has valid format (simple regex)."""
     pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
     return re.match(pattern, email)
 
 
 def is_valid_field(field):
+    """Check if the field is one of 'name', 'grade', 'email'."""
     return field in ["name", "grade", "email"]
 
 
 def prompt_for_student_id(to_phrase):
+    """
+    Generic prompt for specific student id
+
+    Args:
+        to_phrase (str): Context for prompt(e.g., 'to update').
+
+    Returns:
+        int: Valid student ID.
+    """
     student_id = None
     while True:
         try:
@@ -288,6 +378,12 @@ def prompt_for_student_id(to_phrase):
 
 
 def pretty_print(rows):
+    """
+    Prints the outputted rows from the 'students' database in a readable format
+
+    Args:
+        rows (list[tuple[int, str, str, str]]): rows outputted from the select query
+    """
     print("\nID  Name                 Grade  Email")
     print("------------------------------------------------------------")
 
@@ -299,6 +395,16 @@ def pretty_print(rows):
 
 
 def id_is_in_database(con, student_id):
+    """
+    Check if a student ID exists in the database.
+
+    Args:
+        con (sqlite3.Connection): Database connection.
+        student_id (int): ID to check.
+
+    Returns:
+        bool: True if ID exists, False otherwise.
+    """
     try:
         cur = con.cursor()
         cur.execute("SELECT id FROM students")
@@ -311,6 +417,12 @@ def id_is_in_database(con, student_id):
 
 
 def insert_dummy_data(con):
+    """
+    Insert sample students into the database if the table is empty.
+
+    Args:
+        con (sqlite3.Connection): The database connection object.
+    """
     try:
         cur = con.cursor()
         cur.execute("SELECT COUNT(*) FROM students")
@@ -336,6 +448,7 @@ def insert_dummy_data(con):
 # MAIN LOOP
 #######################
 def main(con):
+    """Run the menu-driven application."""
     while True:
         display_menu()
         user_choice = get_user_input()
@@ -360,6 +473,7 @@ def main(con):
 if __name__ == "__main__":
     con = None
     try:
+        # Use context manager to automatically commit/close
         with sqlite3.connect("students.db") as con:
             create_students_table(con)
             insert_dummy_data(con)
