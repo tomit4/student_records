@@ -59,6 +59,8 @@ def create_students_table(con):
         cur.close()
     except sqlite3.OperationalError as e:
         print("Failed to create table in database:", e)
+    except sqlite3.Error as e:
+        print("A generic database error occured: ", e)
 
 
 ########################
@@ -81,6 +83,8 @@ def display_students(con):
         return list(rows)
     except sqlite3.OperationalError as e:
         print("Failed to select all rows from students table: ", e)
+    except sqlite3.Error as e:
+        print("A generic database error occured: ", e)
 
 
 ########################
@@ -143,6 +147,8 @@ def insert_student_data(con, name, grade, email):
         print("Successfully added new student!")
     except sqlite3.OperationalError as e:
         print("Failed to insert data into students table: ", e)
+    except sqlite3.Error as e:
+        print("A generic database error occured: ", e)
 
 
 ########################
@@ -180,28 +186,22 @@ def prompt_for_update_fields(con, student_id):
     Returns:
         list (str): A list of selected fields to update
     """
-    try:
-        cur = con.cursor()
-        cur.execute("SELECT * FROM students WHERE id = ?", (student_id,))
-        rows = cur.fetchall()
-        while True:
-            pretty_print(rows)
-            update_fields = (
-                input(
-                    "Enter fields you wish to update for student (name, grade, email),\nSeparate each field by a space: "
-                )
-                .lower()
-                .split(" ")
+    rows = get_student_by_id(con, student_id)
+    while True:
+        pretty_print(rows)
+        update_fields = (
+            input(
+                "Enter fields you wish to update for student (name, grade, email),\nSeparate each field by a space: "
             )
-            for field in update_fields:
-                if not is_valid_field(field):
-                    print(f"{field} is not a valid field, please try again")
-                    continue
-                else:
-                    cur.close()
-                    return update_fields
-    except sqlite3.OperationalError as e:
-        print("Failed to select ids from students table: ", e)
+            .lower()
+            .split(" ")
+        )
+        for field in update_fields:
+            if not is_valid_field(field):
+                print(f"{field} is not a valid field, please try again")
+                continue
+            else:
+                return update_fields
 
 
 def update_student(con, student_id, update_fields):
@@ -254,13 +254,14 @@ def update_student(con, student_id, update_fields):
         cur = con.cursor()
         cur.execute(f"UPDATE students SET {set_clause} WHERE id = ?", values)
         con.commit()
-        print("Successfully updated student!")
-        cur.execute("SELECT * FROM students WHERE id = ?", (student_id,))
-        rows = cur.fetchall()
-        pretty_print(rows)
         cur.close()
+        print("Successfully updated student!")
+        rows = get_student_by_id(con, student_id)
+        pretty_print(rows)
     except sqlite3.OperationalError as e:
         print("Failed to update students table: ", e)
+    except sqlite3.Error as e:
+        print("A generic database error occured: ", e)
 
 
 ########################
@@ -293,14 +294,8 @@ def prompt_for_delete_data(con):
         id_exists = id_is_in_database(con, student_id)
 
         if id_exists:
-            try:
-                cur = con.cursor()
-                cur.execute("SELECT * FROM students WHERE id = ?", (student_id,))
-                rows = cur.fetchall()
-                pretty_print(rows)
-                cur.close()
-            except sqlite3.OperationalError as e:
-                print("Failed to select student from students table: ", e)
+            rows = get_student_by_id(con, student_id)
+            pretty_print(rows)
             are_you_really_sure = input(
                 f"Are you sure you wish to delete student with id {student_id}? (y/n): "
             ).lower()
@@ -330,6 +325,8 @@ def delete_student(con, student_id):
         cur.close()
     except sqlite3.OperationalError as e:
         print("Failed to delete from students table: ", e)
+    except sqlite3.Error as e:
+        print("A generic database error occured: ", e)
 
 
 ########################
@@ -377,6 +374,19 @@ def prompt_for_student_id(to_phrase):
         return student_id
 
 
+def get_student_by_id(con, student_id):
+    try:
+        cur = con.cursor()
+        cur.execute("SELECT * FROM students WHERE id = ?", (student_id,))
+        rows = cur.fetchall()
+        cur.close()
+        return rows
+    except sqlite3.OperationalError as e:
+        print("Failed to select ids from students table: ", e)
+    except sqlite3.Error as e:
+        print("A generic database error occured: ", e)
+
+
 def pretty_print(rows):
     """
     Prints the outputted rows from the 'students' database in a readable format
@@ -414,6 +424,8 @@ def id_is_in_database(con, student_id):
         return student_id in ids
     except sqlite3.OperationalError as e:
         print("Failed to select ids from students table: ", e)
+    except sqlite3.Error as e:
+        print("A generic database error occured: ", e)
 
 
 def insert_dummy_data(con):
@@ -442,45 +454,47 @@ def insert_dummy_data(con):
         cur.close()
     except sqlite3.OperationalError as e:
         print("Failed to insert dummy data:", e)
+    except sqlite3.Error as e:
+        print("A generic database error occured: ", e)
 
 
 ########################
 # MAIN LOOP
 #######################
-def main(con):
+def main():
     """Run the menu-driven application."""
-    while True:
-        display_menu()
-        user_choice = get_user_input()
-        match user_choice:
-            case 1:
-                rows = display_students(con)
-                pretty_print(rows)
-            case 2:
-                name, grade, email = prompt_for_insert_data()
-                insert_student_data(con, name, grade, email)
-            case 3:
-                prompt_for_update_data(con)
-            case 4:
-                prompt_for_delete_data(con)
-            case 5:
-                print("Goodbye!")
-                break
-            case _:
-                continue
-
-
-if __name__ == "__main__":
     con = None
     try:
         # Use context manager to automatically commit/close
         with sqlite3.connect("students.db") as con:
             create_students_table(con)
             insert_dummy_data(con)
-            main(con)
+            while True:
+                display_menu()
+                user_choice = get_user_input()
+                match user_choice:
+                    case 1:
+                        rows = display_students(con)
+                        pretty_print(rows)
+                    case 2:
+                        name, grade, email = prompt_for_insert_data()
+                        insert_student_data(con, name, grade, email)
+                    case 3:
+                        prompt_for_update_data(con)
+                    case 4:
+                        prompt_for_delete_data(con)
+                    case 5:
+                        print("Goodbye!")
+                        break
+                    case _:
+                        continue
     except sqlite3.Error as e:
         print("Failed to connect to database: ", e)
     finally:
         if con:
             con.close()
         sys.exit()
+
+
+if __name__ == "__main__":
+    main()
