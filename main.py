@@ -288,12 +288,12 @@ def prompt_for_student_id(to_phrase):
 
 
 def pretty_print(rows):
-    print("\nID  Name        Grade  Email")
-    print("------------------------------------------")
+    print("\nID  Name                 Grade  Email")
+    print("------------------------------------------------------------")
 
     for row in rows:
         id, name, grade, email = row
-        print(f"{id:<3} {name:<11} {grade:<6} {email}")
+        print(f"{id:<3} {name:<20} {grade:<6} {email}")
 
     print()
 
@@ -308,6 +308,28 @@ def id_is_in_database(con, student_id):
         return student_id in ids
     except sqlite3.OperationalError as e:
         print("Failed to select ids from students table: ", e)
+
+
+def insert_dummy_data(con):
+    try:
+        cur = con.cursor()
+        cur.execute("SELECT COUNT(*) FROM students")
+        count = cur.fetchone()[0]
+        if count == 0:
+            dummy_students = [
+                ("Alice Johnson", "A", "alice.johnson@example.com"),
+                ("Bob Smith", "B", "bob.smith@example.com"),
+                ("Carol Lee", "C", "carol.lee@example.com"),
+                ("David Brown", "B", "david.brown@example.com"),
+            ]
+            cur.executemany(
+                "INSERT INTO students(name, grade, email) VALUES (?, ?, ?)",
+                dummy_students,
+            )
+            con.commit()
+        cur.close()
+    except sqlite3.OperationalError as e:
+        print("Failed to insert dummy data:", e)
 
 
 ########################
@@ -338,9 +360,10 @@ def main(con):
 if __name__ == "__main__":
     con = None
     try:
-        con = sqlite3.connect("students.db")
-        create_students_table(con)
-        main(con)
+        with sqlite3.connect("students.db") as con:
+            create_students_table(con)
+            insert_dummy_data(con)
+            main(con)
     except sqlite3.Error as e:
         print("Failed to connect to database: ", e)
     finally:
